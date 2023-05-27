@@ -65,6 +65,9 @@
         // ZSH
         "terminal.integrated.defaultProfile.linux": "zsh"
       }
+    },
+    "codespaces": {
+      "openFiles": ["src/main/scala/Main.worksheet.sc"]
     }
   },
   "containerEnv": {
