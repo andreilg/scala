@@ -1,0 +1,1 @@
+npx audit-ci --moderate

@@ -1,0 +1,77 @@
+{
+  "name": "scala",
+  "image": "mcr.microsoft.com/devcontainers/base:1-ubuntu-22.04",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "18"
+    },
+    "ghcr.io/devcontainers/features/java:1": {
+      "version": "17"
+    },
+    "ghcr.io/devcontainers-contrib/features/scala-sdkman:2": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        // General
+        "eamodio.gitlens",
+        "EditorConfig.EditorConfig",
+        "GitHub.vscode-pull-request-github",
+        "ms-vsliveshare.vsliveshare",
+        "redhat.vscode-yaml",
+        "remcohaszing.schemastore",
+        "scalameta.metals",
+        "tamasfe.even-better-toml",
+        "Trunk.io"
+      ],
+      "settings": {
+        // eamodio.gitlens
+        "gitlens.currentLine.enabled": false,
+        "gitlens.defaultDateFormat": "YYYY-MM-DD",
+        "gitlens.defaultTimeFormat": "H:mm",
+        // EditorConfig.EditorConfig
+        "editorconfig.generateAuto": false,
+        // GitHub.vscode-pull-request-github
+        "githubIssues.createIssueTriggers": [],
+        "githubPullRequests.assignCreated": "${user}",
+        "githubPullRequests.defaultCommentType": "review",
+        "githubPullRequests.defaultMergeMethod": "squash",
+        "githubPullRequests.notifications": "pullRequests",
+        "githubPullRequests.pullBranch": "always",
+        "githubPullRequests.pullRequestDescription": "commit",
+        "githubPullRequests.pushBranch": "always",
+        // MS-vsliveshare.vsliveshare
+        "liveshare.allowGuestDebugControl": true,
+        "liveshare.allowGuestTaskControl": true,
+        "liveshare.increasedGuestLimit": false,
+        "liveshare.languages.allowGuestCommandControl": true,
+        "liveshare.launcherClient": "visualStudioCode",
+        "liveshare.notebooks.allowGuestExecuteCells": true,
+        "liveshare.presence": true,
+        // redhat.vscode-yaml
+        "redhat.telemetry.enabled": false,
+        "yaml.format.enable": false,
+        // trunk.io
+        "editor.defaultFormatter": "trunk.io",
+        "files.exclude": {
+          "**/.trunk/*out": true
+        },
+        "files.watcherExclude": {
+          "**/.trunk/*out": true
+        },
+        "trunk.autoInit": false,
+        "trunk.showWhatsNew": false,
+        "trunk.showWhatsNewMessage": false,
+        "trunk.trunkGrayOutNonBlockingIssues": false,
+        // ZSH
+        "terminal.integrated.defaultProfile.linux": "zsh"
+      }
+    }
+  },
+  "containerEnv": {
+    "CI": "false",
+    "NODE_ENV": "development"
+  },
+  "waitFor": "onCreateCommand",
+  "updateContentCommand": "mkdir -p logs && bash .devcontainer/scripts/updateContentCommand.bash >| logs/updateContentCommand.log"
+}
