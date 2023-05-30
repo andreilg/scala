@@ -11,42 +11,47 @@ object EffectfulPulls:
     case Result[+R](result: R) extends Pull[Nothing, Nothing, R]
     case Output[+O](value: O) extends Pull[Nothing, O, Unit]
     case Eval[+F[_], R](action: F[R]) extends Pull[F, Nothing, R]
-    case FlatMap[+F[_], X, +O, +R](
-      source: Pull[F, O, X], f: X => Pull[F, O, R]) extends Pull[F, O, R]
+    case FlatMap[+F[_], X, +O, +R](source: Pull[F, O, X], f: X => Pull[F, O, R])
+        extends Pull[F, O, R]
     case Uncons[+F[_], +O, +R](source: Pull[F, O, R])
-      extends Pull[F, Nothing, Either[R, (O, Pull[F, O, R])]]
+        extends Pull[F, Nothing, Either[R, (O, Pull[F, O, R])]]
 
-    def step[F2[x] >: F[x], O2 >: O, R2 >: R](
-      using F: Monad[F2]
+    def step[F2[x] >: F[x], O2 >: O, R2 >: R](using
+        F: Monad[F2]
     ): F2[Either[R2, (O2, Pull[F2, O2, R2])]] =
       this match
-        case Result(r) => F.unit(Left(r))
-        case Output(o) => F.unit(Right(o, Pull.done))
+        case Result(r)    => F.unit(Left(r))
+        case Output(o)    => F.unit(Right(o, Pull.done))
         case Eval(action) => action.map(Left(_))
         case Uncons(source) =>
           source.step.map(s => Left(s.asInstanceOf[R2]))
-        case FlatMap(source, f) => 
+        case FlatMap(source, f) =>
           source match
             case FlatMap(s2, g) =>
               s2.flatMap(x => g(x).flatMap(y => f(y))).step
-            case other => other.step.flatMap:
-              case Left(r) => f(r).step
-              case Right((hd, tl)) => F.unit(Right((hd, tl.flatMap(f))))
+            case other =>
+              other.step.flatMap:
+                case Left(r)         => f(r).step
+                case Right((hd, tl)) => F.unit(Right((hd, tl.flatMap(f))))
 
-    def fold[F2[x] >: F[x], R2 >: R, A](init: A)(f: (A, O) => A)(
-      using F: Monad[F2]
-    ): F2[(R2, A)] = 
+    def fold[F2[x] >: F[x], R2 >: R, A](init: A)(f: (A, O) => A)(using
+        F: Monad[F2]
+    ): F2[(R2, A)] =
       step.flatMap:
-        case Left(r) => F.unit((r, init))
+        case Left(r)         => F.unit((r, init))
         case Right((hd, tl)) => tl.fold(f(init, hd))(f)
 
     def toList[F2[x] >: F[x]: Monad, O2 >: O]: F2[List[O2]] =
       fold(List.newBuilder[O])((bldr, o) => bldr += o).map(_(1).result)
 
-    def flatMap[F2[x] >: F[x], O2 >: O, R2](f: R => Pull[F2, O2, R2]): Pull[F2, O2, R2] =
+    def flatMap[F2[x] >: F[x], O2 >: O, R2](
+        f: R => Pull[F2, O2, R2]
+    ): Pull[F2, O2, R2] =
       FlatMap(this, f)
 
-    def >>[F2[x] >: F[x], O2 >: O, R2](next: => Pull[F2, O2, R2]): Pull[F2, O2, R2] =
+    def >>[F2[x] >: F[x], O2 >: O, R2](
+        next: => Pull[F2, O2, R2]
+    ): Pull[F2, O2, R2] =
       flatMap(_ => next)
 
     def map[R2](f: R => R2): Pull[F, O, R2] =
@@ -60,9 +65,10 @@ object EffectfulPulls:
 
     def take(n: Int): Pull[F, O, Option[R]] =
       if n <= 0 then Result(None)
-      else uncons.flatMap:
-        case Left(r) => Result(Some(r))
-        case Right((hd, tl)) => Output(hd) >> tl.take(n - 1)
+      else
+        uncons.flatMap:
+          case Left(r)         => Result(Some(r))
+          case Right((hd, tl)) => Output(hd) >> tl.take(n - 1)
 
     def takeWhile(f: O => Boolean): Pull[F, O, Pull[F, O, R]] =
       uncons.flatMap:
@@ -80,7 +86,7 @@ object EffectfulPulls:
 
     def mapOutput[O2](f: O => O2): Pull[F, O2, R] =
       uncons.flatMap:
-        case Left(r) => Result(r)
+        case Left(r)         => Result(r)
         case Right((hd, tl)) => Output(f(hd)) >> tl.mapOutput(f)
 
     def filter(p: O => Boolean): Pull[F, O, R] =
@@ -107,7 +113,9 @@ object EffectfulPulls:
             Output(newTotal) >> go(newTotal, tl)
       Output(m.empty) >> go(m.empty, this)
 
-    def mapAccumulate[S, O2](init: S)(f: (S, O) => (S, O2)): Pull[F, O2, (S, R)] =
+    def mapAccumulate[S, O2](init: S)(
+        f: (S, O) => (S, O2)
+    ): Pull[F, O2, (S, R)] =
       uncons.flatMap:
         case Left(r) => Result((init, r))
         case Right((hd, tl)) =>
@@ -120,20 +128,26 @@ object EffectfulPulls:
 
     def unfold[O, R](init: R)(f: R => Either[R, (O, R)]): Pull[Nothing1, O, R] =
       f(init) match
-        case Left(r) => Result(r)
+        case Left(r)        => Result(r)
         case Right((o, r2)) => Output(o) >> unfold(r2)(f)
 
     // Exercise 15.11
-    def unfoldEval[F[_], O, R](init: R)(f: R => F[Either[R, (O, R)]]): Pull[F, O, R] =
+    def unfoldEval[F[_], O, R](init: R)(
+        f: R => F[Either[R, (O, R)]]
+    ): Pull[F, O, R] =
       ???
 
     extension [F[_], R](self: Pull[F, Int, R])
       def slidingMean(n: Int): Pull[F, Double, R] =
-        def go(window: collection.immutable.Queue[Int], p: Pull[F, Int, R]): Pull[F, Double, R] =
+        def go(
+            window: collection.immutable.Queue[Int],
+            p: Pull[F, Int, R]
+        ): Pull[F, Double, R] =
           p.uncons.flatMap:
             case Left(r) => Result(r)
             case Right((hd, tl)) =>
-              val newWindow = if window.size < n then window :+ hd else window.tail :+ hd
+              val newWindow =
+                if window.size < n then window :+ hd else window.tail :+ hd
               val meanOfNewWindow = newWindow.sum / newWindow.size.toDouble
               Output(meanOfNewWindow) >> go(newWindow, tl)
         go(collection.immutable.Queue.empty, self)
@@ -165,13 +179,13 @@ object EffectfulPulls:
 
     def fromList[O](os: List[O]): Stream[Nothing1, O] =
       os match
-        case Nil => Pull.done
+        case Nil      => Pull.done
         case hd :: tl => Pull.Output(hd) >> fromList(tl)
 
     def fromLazyList[O](os: LazyList[O]): Stream[Nothing1, O] =
       os match
         case LazyList() => Pull.done
-        case hd #:: tl => Pull.Output(hd) >> fromLazyList(tl)
+        case hd #:: tl  => Pull.Output(hd) >> fromLazyList(tl)
 
     def unfold[O, R](init: R)(f: R => Option[(O, R)]): Stream[Nothing1, O] =
       Pull.unfold(init)(r => f(r).toRight(r)).void
@@ -187,13 +201,15 @@ object EffectfulPulls:
       ???
 
     // Exercise 15.11
-    def unfoldEval[F[_], O, R](init: R)(f: R => F[Option[(O, R)]]): Stream[F, O] =
+    def unfoldEval[F[_], O, R](init: R)(
+        f: R => F[Option[(O, R)]]
+    ): Stream[F, O] =
       ???
 
     extension [F[_], O](self: Stream[F, O])
       def toPull: Pull[F, O, Unit] = self
 
-      def fold[A](init: A)(f: (A, O) => A)(using Monad[F]): F[A] = 
+      def fold[A](init: A)(f: (A, O) => A)(using Monad[F]): F[A] =
         self.fold(init)(f).map(_(1))
 
       def toList(using Monad[F]): F[List[O]] =
@@ -225,7 +241,7 @@ object EffectfulPulls:
         ???
 
     extension [O](self: Stream[Nothing, O])
-      def fold[A](init: A)(f: (A, O) => A): A = 
+      def fold[A](init: A)(f: (A, O) => A): A =
         self.fold(init)(f)(using Monad.tailrecMonad).result(1)
 
       def toList: List[O] =
